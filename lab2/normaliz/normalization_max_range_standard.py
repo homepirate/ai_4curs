@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Загрузка данных из файла
-data = pd.read_csv('../ex1data2.txt', header=None)
+data = pd.read_csv('ex1data2.txt', header=None)
 data.columns = ['Engine_Speed', 'Num_Gears', 'Price']
 
 # Отображение первых нескольких записей
@@ -64,7 +64,7 @@ plt.ylabel('Цена (нормированная)')
 plt.tight_layout()
 plt.savefig('normalization_max_range_standard.png')
 
-# Явное вычисление среднего значения и стандартного отклонения
+# Стандартные функции Python
 means_explicit = {}
 std_devs_explicit = {}
 
@@ -75,12 +75,12 @@ for col in data.columns:
 print("Средние значения (явное вычисление):\n", means_explicit)
 print("Стандартные отклонения (явное вычисление):\n", std_devs_explicit)
 
-# Стандартные функции Python
-# means_std = data.mean()
-# std_devs_std = data.std()
-#
-# print("Средние значения (стандартные функции):\n", means_std)
-# print("Стандартные отклонения (стандартные функции):\n", std_devs_std)
+# Явно по определению
+means_std = data.mean()
+std_devs_std = data.std()
+
+print("Средние значения (стандартные функции):\n", means_std)
+print("Стандартные отклонения (стандартные функции):\n", std_devs_std)
 
 
 
