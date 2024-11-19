@@ -11,12 +11,19 @@ def warm_up_exercise(n):
 
     return A, A_manual
 
-def plot_data(X, y):
+def plot_data(X, y, theta=None, filename='1.png'):
     plt.scatter(X, y, marker='x', color='r')
     plt.xlabel('Number of Cars')
     plt.ylabel('Profit')
     plt.title('Profit vs. Number of Cars')
-    plt.savefig('1.png')
+
+    if theta is not None:
+        x_line = np.linspace(min(X), max(X), len(X))
+        y_line = theta[0] + theta[1] * x_line
+
+        plt.plot(x_line, y_line, color='b', label='Линия регрессии')
+        plt.legend()
+    plt.savefig(filename)
 
 
 def compute_cost(X, y, theta):
@@ -71,7 +78,7 @@ def gradient_descent_by_element(X, y, theta, alpha, iterations):
     return theta
 
 
-def work(theta):
+def work(theta, theta_el):
     print("Программа прогнозирования прибыли запущена.")
     while True:
         user_input = input("Введите количество автомобилей (или 'exit' для выхода): ")
@@ -80,7 +87,11 @@ def work(theta):
         try:
             num_cars = float(user_input)
             profit = theta[0] + theta[1] * num_cars
-            print(f'Предсказанная прибыль для {num_cars} автомобилей: {profit}')
+            print(f'Предсказанная прибыль для {num_cars} автомобилей (векторный способ): {profit}')
+
+            profit = theta_el[0] + theta[1] * num_cars
+            print(f'Предсказанная прибыль для {num_cars} автомобилей (поэлементный способ): {profit}')
+
         except ValueError:
             print("Пожалуйста, введите корректное значение.")
 
@@ -95,9 +106,10 @@ def main():
 
     plot_data(X, y)
 
+    X_original = X.copy()
+
     X = np.c_[np.ones(m), X]
     theta = np.zeros(2) # Инициализируем параметры theta
-    theta = np.array([1, 2])
 
     # Вычисление начальной стоимости
     print(f'Initial cost: {compute_cost(X, y, theta)}')
@@ -108,12 +120,14 @@ def main():
 
     theta = gradient_descent(X, y, theta, alpha, iterations)
 
-    print(f'Theta found by gradient descent: {theta}')
+    print(f'Theta gradient descent: {theta}')
+    plot_data(X_original, y, theta, '2.png')
+
 
     theta_el = gradient_descent_by_element(X, y, theta, alpha, iterations)
-    print(f'Theta found by gradient descent by element: {theta_el}')
+    print(f'Theta gradient descent by element: {theta_el}')
 
-    work(theta)
+    work(theta, theta_el)
 
 
 if __name__ == "__main__":
