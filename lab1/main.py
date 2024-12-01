@@ -36,16 +36,24 @@ def compute_cost(X, y, theta):
 
 
 def compute_cost_by_element(X, Y, theta):
-    m = len(Y)
+    m = len(Y)  # Число примеров
     total_cost = 0
 
     for i in range(m):
-        prediction = X[i].dot(theta)  # Предсказание для i-й строки
-        error = prediction - Y[i]      # Ошибка для i-й строки
-        total_cost += error ** 2      # Квадрат ошибки
 
+        error = 0
+        for j in range(len(theta)):  # Для каждого параметра
+            error += (theta[j] * X[i][j])
+
+        error -= Y[i]
+
+        # Суммируем квадрат ошибки
+        total_cost += error ** 2
+
+    # Возвращаем стоимость (среднеквадратичная ошибка)
     cost = (1 / (2 * m)) * total_cost
     return cost
+
 
 def gradient_descent(X, y, theta, alpha, iterations):
     m = len(y)
@@ -57,20 +65,30 @@ def gradient_descent(X, y, theta, alpha, iterations):
 
 
 def gradient_descent_by_element(X, y, theta, alpha, iterations):
-    m = len(y)
-    n = len(theta)
+    m = len(y)  # Число примеров
+    n = len(theta)  # Число параметров
 
     for _ in range(iterations):
         temp_theta = np.copy(theta)
 
+        # Для каждого параметра theta
         for j in range(n):
             sum_error = 0
 
+            # Для каждого примера
             for i in range(m):
-                hypothesis = np.dot(X[i], theta)
-                error = hypothesis - y[i]
-                sum_error += error * X[i][j]
 
+                error = 0
+                for k in range(0, n):
+                    error += theta[k] * X[i][k]  # Умножаем соответствующие элементы
+
+                # Ошибка для i-го примера
+                error -= y[i]
+
+                # Суммируем ошибки для каждого параметра
+                sum_error += error * X[i][j - 1] if j > 0 else error
+
+            # Обновляем параметр theta[j]
             temp_theta[j] -= (alpha / m) * sum_error
 
         theta = temp_theta

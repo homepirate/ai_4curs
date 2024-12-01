@@ -3,7 +3,6 @@ import random
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from districts import *
-import seaborn as sns
 
 import matplotlib.pyplot as plt
 
@@ -51,7 +50,7 @@ def make_files_for_training(df: pd.DataFrame):
 
 
 def create_df():
-    df = pd.read_csv('data/csvdata.csv')
+    df = pd.read_csv('../data/csvdata.csv')
 
     df = df.drop('Unnamed: 0', axis=1)
 
