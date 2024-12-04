@@ -43,9 +43,9 @@ def compute_cost_by_element(X, Y, theta):
 
         error = 0
         for j in range(len(theta)):  # Для каждого параметра
-            error += (theta[j] * X[i][j])
+            error += ((theta[j] * X[i][j]) - Y[i] / len(theta))
 
-        error -= Y[i]
+        # error -= Y[i]
 
         # Суммируем квадрат ошибки
         total_cost += error ** 2
@@ -80,10 +80,10 @@ def gradient_descent_by_element(X, y, theta, alpha, iterations):
 
                 error = 0
                 for k in range(0, n):
-                    error += theta[k] * X[i][k]  # Умножаем соответствующие элементы
+                    error += (theta[k] * X[i][k] - y[i] / n)  # Умножаем соответствующие элементы высчитываем ошибку
 
                 # Ошибка для i-го примера
-                error -= y[i]
+                # error -= y[i]
 
                 # Суммируем ошибки для каждого параметра
                 sum_error += error * X[i][j - 1] if j > 0 else error
