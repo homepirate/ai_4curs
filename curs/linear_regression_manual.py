@@ -1,104 +1,78 @@
+import pandas as pd
 import numpy as np
-import csv
 
+# 1. Загрузка данных
+df = pd.read_csv('shdf.csv')
 
-# Функция для нормализации данных (min-max нормализация)
-def normalize(data):
-    return (data - np.min(data)) / (np.max(data) - np.min(data))
+# 2. Удаление выбросов (на основе IQR)
+q1 = np.percentile(df['Price'], 25)
+q3 = np.percentile(df['Price'], 75)
+iqr = q3 - q1
+lower_bound = q1 - 1.5 * iqr
+upper_bound = q3 + 1.5 * iqr
+df = df[(df['Price'] >= lower_bound) & (df['Price'] <= upper_bound)]
 
+# 3. Преобразование признаков (логарифм площади)
+df['Log_Area'] = np.log1p(df['Area'])
 
-# Функция для денормализации данных
-def denormalize(normalized_data, original_data):
-    return (normalized_data * (np.max(original_data) - np.min(original_data))) + np.min(original_data)
+# 4. Кодирование категориальных признаков вручную (создание дамми-переменных для 'Location')
+df = pd.get_dummies(df, columns=['Location'], drop_first=True)
 
+# 5. Разделение данных на X (признаки) и y (целевую переменную)
+X = df.drop(['Price', 'Area'], axis=1).values
+y = df['Price'].values
 
-# Функция для вычисления MSE (среднеквадратичная ошибка)
-def mean_squared_error(y_true, y_pred):
-    return np.mean((y_true - y_pred) ** 2)
+# 6. Масштабирование признаков вручную (стандартизация)
+X = np.array(X, dtype=float)  # Принудительное приведение всех значений к float
 
+# Удаление строк с NaN или Inf значениями
+if np.any(np.isnan(X)) or np.any(np.isinf(X)):
+    print("Найдены NaN/Inf значения в X. Удаляем их.")
+    X = X[~np.isnan(X).any(axis=1)]  # Удаляем строки с NaN
+    X = X[~np.isinf(X).any(axis=1)]  # Удаляем строки с Inf
 
-# Функция для предсказания
-def predict(X, weights):
-    return np.dot(X, weights)
+# Проверка размерности X
+if X.ndim == 1:
+    X = X.reshape(-1, 1)  # Преобразуем в двумерный массив, если X одномерный
+elif X.ndim > 2:
+    raise ValueError("X должно быть не более чем двумерным массивом")
 
+# Масштабируем нормальные признаки
+X_mean = np.mean(X, axis=0)
+X_std = np.std(X, axis=0)
+X_std = np.where(X_std == 0, 1e-10, X_std)  # Избегаем деления на 0
+X_scaled = (X - X_mean) / X_std
 
-# Реализация градиентного спуска
-def gradient_descent(X, y, weights, learning_rate, epochs):
-    m = len(y)  # Количество примеров
-    for epoch in range(epochs):
-        y_pred = predict(X, weights)  # Предсказания на текущем шаге
-        error = y_pred - y  # Ошибка
-        gradients = (1 / m) * np.dot(X.T, error)  # Градиент
-        weights -= learning_rate * gradients  # Обновляем веса
+# 7. Разделение на обучающие и тестовые данные
+split_index = int(0.8 * len(X_scaled))
+X_train, X_test = X_scaled[:split_index], X_scaled[split_index:]
+y_train, y_test = y[:split_index], y[split_index:]
 
-        # Печатаем MSE каждые 100 итераций
-        if epoch % 100 == 0:
-            print(f"Epoch {epoch}, MSE: {mean_squared_error(y, y_pred)}")
+# 8. Линейная регрессия с регуляризацией (Ridge regression)
+lambda_reg = 1e4  # Параметр регуляризации
+I = np.eye(X_train.shape[1])  # Единичная матрица для регуляризации
+I[0, 0] = 0  # Не регуляризируем intercept (свободный член)
 
-    return weights
+# Решение через регуляризованный метод наименьших квадратов (Ridge regression)
+X_transpose = X_train.T
+beta = np.linalg.inv(X_transpose @ X_train + lambda_reg * I) @ (X_transpose @ y_train)
 
+# 9. Предсказания
+y_pred = X_test @ beta
 
-# Функция для загрузки данных из CSV
-def load_data(file_path):
-    with open(file_path, 'r') as file:
-        reader = csv.DictReader(file)
-        data = [row for row in reader]
+# 10. Оценка модели
+mse = np.mean((y_test - y_pred) ** 2)
+print(f'Mean Squared Error: {mse}')
 
-    X = []
-    y = []
-    for row in data:
-        X.append([
-            float(row['City']),  # Город
-            float(row['Area']),  # Площадь
-            float(row['Location']),  # Локация
-            float(row['No. of Bedrooms'])  # Количество спален
-        ])
-        y.append(float(row['Price']))  # Цена
+ss_total = np.sum((y_test - np.mean(y_test)) ** 2)
+ss_residual = np.sum((y_test - y_pred) ** 2)
+r2 = 1 - (ss_residual / ss_total)
+print(f'R2 Score: {r2}')
 
-    return np.array(X), np.array(y)
-
-
-# Основная функция
-def main():
-    # Загружаем данные
-    file_path = 'shdf.csv'  # Путь к вашему CSV-файлу
-    X, y = load_data(file_path)
-
-    # Нормализация данных
-    y_original = y.copy()  # Сохраняем оригиналы для денормализации
-    y = normalize(y)
-    X = normalize(X)
-
-    # Добавляем столбец единиц для учета свободного члена (bias)
-    X = np.c_[np.ones(X.shape[0]), X]
-
-    # Инициализация параметров
-    weights = np.zeros(X.shape[1])  # Инициализируем веса нулями
-    learning_rate = 0.01
-    epochs = 13
-
-    # Обучение модели
-    weights = gradient_descent(X, y, weights, learning_rate, epochs)
-
-    # Вывод обученных весов
-    print(f"Обученные веса: {weights}")
-
-    # Пример предсказания
-    example = np.array([2, 645, 67, 1])  # Пример входных данных (без цены)
-
-    # Нормализация примера (учитываем только признаки, без bias)
-    example_normalized = normalize(example)
-
-    # Добавляем bias (единицу) для примера
-    example_with_bias = np.concatenate(([1], example_normalized))
-
-    # Предсказание
-    prediction_normalized = predict(example_with_bias, weights)
-
-    # Денормализация предсказания
-    prediction = denormalize(prediction_normalized, y_original)
-    print(f"Предсказание для примера: {prediction}")
-
-
-if __name__ == '__main__':
-    main()
+# 11. Проверка предсказаний
+print("\nПроверка предсказаний:")
+test_results = pd.DataFrame({
+    'Real Price': y_test,
+    'Predicted Price': y_pred
+})
+print(test_results.head())  # Печать первых 5 строк
