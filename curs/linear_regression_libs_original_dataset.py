@@ -1,91 +1,88 @@
+# optimized_ml_code.py
 import pandas as pd
 import numpy as np
 from keras import Sequential
 from keras.src.callbacks import EarlyStopping
 from keras.src.layers import Dense, Dropout
 from keras.src.optimizers import Adam
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
+import joblib  # For saving the model
 
-
-# Загрузка данных
-data_path = 'csvdata.csv'
+# Load the dataset
+data_path = '../data/csvdata.csv'
 df = pd.read_csv(data_path)
 
-# Просмотр данных
-print(df.head())
+# Drop unnecessary columns
+df.drop(columns=['Unnamed: 0'], errors='ignore', inplace=True)
 
+# Check and remove null values
+df.dropna(inplace=True)
 
-# Удаление индекса, если он не нужен
-if 'Unnamed: 0' in df.columns:
-    df = df.drop(columns=['Unnamed: 0'])
-
-# Проверим и обработаем пропуски, если есть
-print(f"Пропуски в данных: \n{df.isna().sum()}")
-df = df.dropna()  # В данном случае удаляем строки с пропусками (если они есть)
-
-# Преобразование категориальных признаков (City и Location) в числовые
+# Encode categorical variables
 label_enc_city = LabelEncoder()
 label_enc_loc = LabelEncoder()
-
 df['City'] = label_enc_city.fit_transform(df['City'])
 df['Location'] = label_enc_loc.fit_transform(df['Location'])
 
-# Целевая переменная (Price) и входные данные (все остальные колонки, кроме Price)
+# Define features and target variable
 X = df.drop(columns=['Price'])
 y = df['Price']
 
-# Нормализация числовых данных
+# Normalize the features
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# Перемешивание и разделение данных на обучающую и тестовую выборки
+# Split the data
 X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42, shuffle=True)
 
-print("Данные успешно обработаны!")
-
-
-# Построение модели
+# Build the neural network model
 model = Sequential([
     Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
     Dropout(0.2),
     Dense(64, activation='relu'),
     Dropout(0.2),
     Dense(32, activation='relu'),
-    Dense(1)  # Выходной слой для регрессии
+    Dense(1)  # Output layer for regression
 ])
 
-# Компиляция модели
+# Compile the model
 model.compile(optimizer=Adam(learning_rate=0.001), loss='mean_squared_error', metrics=['mean_absolute_error'])
 
-# Regularization and Early Stopping
+# Set up EarlyStopping
 early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
-# Model training with Early Stopping
-history = model.fit(X_train, y_train, validation_split=0.2, epochs=100,
-                    batch_size=32, verbose=1, callbacks=[early_stopping])
+# Train the model
+history = model.fit(X_train, y_train, validation_split=0.2, epochs=100, batch_size=32, verbose=1, callbacks=[early_stopping])
 
-
-# Оценка на тестовых данных
+# Evaluate the model
+y_pred = model.predict(X_test).flatten()
 test_loss, test_mae = model.evaluate(X_test, y_test, verbose=0)
-print(f"Средняя абсолютная ошибка на тестовых данных: {test_mae:.2f}")
+r_squared = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 
-# График ошибок на обучающей и валидационной выборках
+print(f"Test MAE: {test_mae:.2f}")
+print(f"R²: {r_squared:.2f}")
+print(f"RMSE: {rmse:.2f}")
 
-plt.plot(history.history['loss'], label='Обучающая выборка')
-plt.plot(history.history['val_loss'], label='Валидационная выборка')
-plt.title('График обучения модели')
-plt.xlabel('Эпохи')
-plt.ylabel('Ошибка (MSE)')
+# Plot training history
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Training History')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
 plt.legend()
-plt.savefig('error.png')
+plt.savefig('training_history.png')
 
-# Пример использования модели для прогнозирования
+# Save the model and scaler
+# model.save('regression_model.h5')
+# joblib.dump(scaler, 'scaler.pkl')
+
+# Example prediction
 sample_input = np.array([[2, 645, 67, 1]])
-sample_input_scaled = scaler.transform(sample_input)  # Нормализация данных
+sample_input_scaled = scaler.transform(sample_input)
 predicted_price = model.predict(sample_input_scaled)
-
-print(f"Прогнозируемая цена: {predicted_price[0][0]:.2f}")
-
-
+print(f"Predicted Price: {predicted_price[0][0]:.2f}")

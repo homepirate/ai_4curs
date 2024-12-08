@@ -1,109 +1,65 @@
-import csv
+# from_scratch_regression.py
+import numpy as np
+import pandas as pd
 
+# Load the dataset
+data_path = '../data/csvdata2.csv'
+df = pd.read_csv(data_path)
 
-# Функция для чтения данных из csv-файла и преобразования их в числовой формат
-def read_csv(filename):
-    data = []
-    with open(filename, 'r') as file:
-        reader = csv.reader(file)
-        next(reader)  # Пропускаем заголовок
-        for row in reader:
-            if row:  # Пропускаем пустые строки
-                # Преобразуем числовые данные в float, пропуская текстовые значения
-                data.append([
-                    float(row[2]),  # Price
-                    float(row[3]),  # Area
-                    len(row[4]) if row[4] else 0,  # Простая числовая замена для Location
-                    float(row[5])  # No. of Bedrooms
-                ])
-    return data
+# Encode categorical variables manually
+df['City'] = df['City'].astype('category').cat.codes
+df['Location'] = df['Location'].astype('category').cat.codes
 
+# Define features and target
+X = df.drop(columns=['Price']).values
+y = df['Price'].values.reshape(-1, 1)
 
-# Функция нормализации данных (мин-макс нормализация)
-def normalize_data(data):
-    normalized_data = []
-    min_max = []
-    for i in range(len(data[0])):  # По каждому столбцу
-        column = [row[i] for row in data]
-        min_val = min(column)
-        max_val = max(column)
-        min_max.append((min_val, max_val))
-        normalized_column = [(x - min_val) / (max_val - min_val) for x in column]
-        normalized_data.append(normalized_column)
-    # Транспонируем обратно в формат списка списков
-    normalized_data = list(map(list, zip(*normalized_data)))
-    return normalized_data, min_max
+# Min-max normalization
+X_min = X.min(axis=0)
+X_max = X.max(axis=0)
+X_scaled = (X - X_min) / (X_max - X_min)
 
+# Add bias term to X
+X_scaled = np.hstack([np.ones((X_scaled.shape[0], 1)), X_scaled])
 
-# Обратная нормализация для предсказания
-def denormalize_price(normalized_price, min_price, max_price):
-    return normalized_price * (max_price - min_price) + min_price
+# Train-test split
+split_idx = int(0.8 * len(X_scaled))
+X_train, X_test = X_scaled[:split_idx], X_scaled[split_idx:]
+y_train, y_test = y[:split_idx], y[split_idx:]
 
+# Initialize weights
+np.random.seed(42)
+weights = np.random.randn(X_train.shape[1], 1)
 
-# Функция разбиения на признаки и целевую переменную
-def split_features_labels(data):
-    features = [row[1:] for row in data]  # Остальные столбцы кроме цены
-    labels = [row[0] for row in data]  # Первый столбец (цена)
-    return features, labels
+# Hyperparameters
+learning_rate = 0.01
+epochs = 100000
+m = len(X_train)
 
+# Gradient descent
+for epoch in range(epochs):
+    predictions = X_train @ weights
+    errors = predictions - y_train
+    gradient = (1 / m) * (X_train.T @ errors)
+    weights -= learning_rate * gradient
 
-# Линейная регрессия с градиентным спуском
-class LinearRegression:
-    def __init__(self, learning_rate=0.01, iterations=1000):
-        self.learning_rate = learning_rate
-        self.iterations = iterations
-        self.weights = None
-        self.bias = 0
+    if epoch % 100 == 0:
+        loss = (1 / (2 * m)) * np.sum(errors ** 2)
+        print(f"Epoch {epoch}, Loss: {loss:.2f}")
 
-    def train(self, X, y):
-        n_samples, n_features = len(X), len(X[0])
-        self.weights = [0] * n_features  # Инициализация весов
-        self.bias = 0  # Инициализация смещения
+# Predictions on test set
+y_pred = X_test @ weights
 
-        # Градиентный спуск
-        for _ in range(self.iterations):
-            y_predicted = [self.predict(x) for x in X]
+# Metrics
+r_squared = 1 - np.sum((y_test - y_pred) ** 2) / np.sum((y_test - y_test.mean()) **2)
+rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
 
-            # Обновляем веса и смещение
-            dW = [0] * n_features
-            for j in range(n_features):
-                dW[j] = (-2 / n_samples) * sum((y[i] - y_predicted[i]) * X[i][j] for i in range(n_samples))
+print(f"R²: {r_squared:.2f}")
+print(f"RMSE: {rmse:.2f}")
 
-            dB = (-2 / n_samples) * sum(y[i] - y_predicted[i] for i in range(n_samples))
-
-            # Шаг градиентного спуска
-            self.weights = [self.weights[j] - self.learning_rate * dW[j] for j in range(n_features)]
-            self.bias -= self.learning_rate * dB
-
-    def predict(self, x):
-        return sum(self.weights[j] * x[j] for j in range(len(x))) + self.bias
-
-
-# Главная функция
-def main():
-    # 1. Загрузка данных
-    filename = 'csvdata.csv'
-    data = read_csv(filename)
-
-    # 2. Нормализация данных
-    normalized_data, min_max = normalize_data(data)
-    min_price, max_price = min_max[0]  # Нужны для обратной нормализации
-
-    # 3. Разделение данных на признаки и целевую переменную
-    features, labels = split_features_labels(normalized_data)
-
-    # 4. Обучение модели
-    model = LinearRegression(learning_rate=0.01, iterations=1000)
-    model.train(features, labels)
-
-    # 5. Пример предсказания (с использованием обученной модели)
-    test_sample = features[0]  # Берем первый образец для теста
-    predicted_price_normalized = model.predict(test_sample)
-    predicted_price = denormalize_price(predicted_price_normalized, min_price, max_price)
-
-    print(f"Предсказанная цена: {predicted_price}")
-    print(f"Фактическая цена: {denormalize_price(labels[0], min_price, max_price)}")
-
-
-if __name__ == "__main__":
-    main()
+# Example prediction
+sample_input = np.array([[2, 645, 67, 1]])
+sample_input_scaled = (sample_input - X_min) / (X_max - X_min)
+sample_input_scaled = np.hstack([np.ones((sample_input_scaled.shape[0], 1)), sample_input_scaled])
+predicted_price = sample_input_scaled @ weights
+print(f"Predicted Price: {predicted_price[0][0]:.2f}")
