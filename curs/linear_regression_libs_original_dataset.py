@@ -1,73 +1,91 @@
 import pandas as pd
 import numpy as np
+from keras import Sequential
+from keras.src.callbacks import EarlyStopping
+from keras.src.layers import Dense, Dropout
+from keras.src.optimizers import Adam
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+import matplotlib.pyplot as plt
 
-# Функция для загрузки данных
-def load_data(file_path):
-    # Считываем данные из CSV файла
-    data = pd.read_csv(file_path)
-    return data
 
-# Функция для подготовки данных
-def prepare_data(data):
-    # Выделяем признаки (X) и целевую переменную (y)
-    X = data[['City', 'Area', 'Location', 'No. of Bedrooms']]
-    y = data['Price'].values
+# Загрузка данных
+data_path = 'csvdata.csv'
+df = pd.read_csv(data_path)
 
-    # Преобразуем категориальные признаки 'City' и 'Location' с помощью OneHotEncoder
-    encoder = OneHotEncoder(sparse_output=False, drop='first')  # Используем одну категорию для избежания коллинеарности
-    X_encoded = encoder.fit_transform(X[['City', 'Location']])
+# Просмотр данных
+print(df.head())
 
-    # Объединяем закодированные данные с остальными признаками
-    X = np.hstack((X_encoded, X[['Area', 'No. of Bedrooms']].values))
 
-    # Нормализуем числовые признаки
-    scaler = StandardScaler()
-    X[:, -2:] = scaler.fit_transform(X[:, -2:])  # Нормализуем Area и No. of Bedrooms
+# Удаление индекса, если он не нужен
+if 'Unnamed: 0' in df.columns:
+    df = df.drop(columns=['Unnamed: 0'])
 
-    return X, y, encoder, scaler
+# Проверим и обработаем пропуски, если есть
+print(f"Пропуски в данных: \n{df.isna().sum()}")
+df = df.dropna()  # В данном случае удаляем строки с пропусками (если они есть)
 
-# Основная функция
-def main():
-    # Путь к вашему CSV-файлу
-    file_path = '/home/evgeniy/PycharmProjects/4curs_AI/data/csvdata.csv'  # обновите путь к вашему файлу, если он другой
+# Преобразование категориальных признаков (City и Location) в числовые
+label_enc_city = LabelEncoder()
+label_enc_loc = LabelEncoder()
 
-    # Загружаем и подготавливаем данные
-    data = load_data(file_path)
-    X, y, encoder, scaler = prepare_data(data)
+df['City'] = label_enc_city.fit_transform(df['City'])
+df['Location'] = label_enc_loc.fit_transform(df['Location'])
 
-    # Разделяем данные на обучающую и тестовую выборки
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Целевая переменная (Price) и входные данные (все остальные колонки, кроме Price)
+X = df.drop(columns=['Price'])
+y = df['Price']
 
-    # Создаем модель линейной регрессии
-    model = LinearRegression()
+# Нормализация числовых данных
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
-    # Обучаем модель
-    model.fit(X_train, y_train)
+# Перемешивание и разделение данных на обучающую и тестовую выборки
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42, shuffle=True)
 
-    # Предсказываем стоимость на тестовой выборке
-    y_pred = model.predict(X_test)
+print("Данные успешно обработаны!")
 
-    # Выводим среднеквадратичную ошибку
-    mse = mean_squared_error(y_test, y_pred)
-    print("Среднеквадратичная ошибка (MSE):", mse)
 
-    # Пример предсказания для новых данных
-    example = pd.DataFrame([["Bangalore", 3340, "JP Nagar Phase 1", 4]],
-                            columns=['City', 'Area', 'Location', 'No. of Bedrooms'])
-    example_encoded = encoder.transform(example[['City', 'Location']])
+# Построение модели
+model = Sequential([
+    Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
+    Dropout(0.2),
+    Dense(64, activation='relu'),
+    Dropout(0.2),
+    Dense(32, activation='relu'),
+    Dense(1)  # Выходной слой для регрессии
+])
 
-    # Подготовка входного примера
-    example_data = np.hstack((example_encoded, example[['Area', 'No. of Bedrooms']].values))
-    example_data[:, -2:] = scaler.transform(example_data[:, -2:])  # Нормализация
+# Компиляция модели
+model.compile(optimizer=Adam(learning_rate=0.001), loss='mean_squared_error', metrics=['mean_absolute_error'])
 
-    # Предсказание
-    predicted_price = model.predict(example_data)
-    print("Предсказанная стоимость для нового объекта:", predicted_price[0])
+# Regularization and Early Stopping
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
-if __name__ == '__main__':
-    main()
+# Model training with Early Stopping
+history = model.fit(X_train, y_train, validation_split=0.2, epochs=100,
+                    batch_size=32, verbose=1, callbacks=[early_stopping])
+
+
+# Оценка на тестовых данных
+test_loss, test_mae = model.evaluate(X_test, y_test, verbose=0)
+print(f"Средняя абсолютная ошибка на тестовых данных: {test_mae:.2f}")
+
+# График ошибок на обучающей и валидационной выборках
+
+plt.plot(history.history['loss'], label='Обучающая выборка')
+plt.plot(history.history['val_loss'], label='Валидационная выборка')
+plt.title('График обучения модели')
+plt.xlabel('Эпохи')
+plt.ylabel('Ошибка (MSE)')
+plt.legend()
+plt.savefig('error.png')
+
+# Пример использования модели для прогнозирования
+sample_input = np.array([[2, 645, 67, 1]])
+sample_input_scaled = scaler.transform(sample_input)  # Нормализация данных
+predicted_price = model.predict(sample_input_scaled)
+
+print(f"Прогнозируемая цена: {predicted_price[0][0]:.2f}")
+
+

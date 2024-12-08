@@ -1,78 +1,109 @@
-import pandas as pd
-import numpy as np
+import csv
 
-# 1. Загрузка данных
-df = pd.read_csv('shdf.csv')
 
-# 2. Удаление выбросов (на основе IQR)
-q1 = np.percentile(df['Price'], 25)
-q3 = np.percentile(df['Price'], 75)
-iqr = q3 - q1
-lower_bound = q1 - 1.5 * iqr
-upper_bound = q3 + 1.5 * iqr
-df = df[(df['Price'] >= lower_bound) & (df['Price'] <= upper_bound)]
+# Функция для чтения данных из csv-файла и преобразования их в числовой формат
+def read_csv(filename):
+    data = []
+    with open(filename, 'r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Пропускаем заголовок
+        for row in reader:
+            if row:  # Пропускаем пустые строки
+                # Преобразуем числовые данные в float, пропуская текстовые значения
+                data.append([
+                    float(row[2]),  # Price
+                    float(row[3]),  # Area
+                    len(row[4]) if row[4] else 0,  # Простая числовая замена для Location
+                    float(row[5])  # No. of Bedrooms
+                ])
+    return data
 
-# 3. Преобразование признаков (логарифм площади)
-df['Log_Area'] = np.log1p(df['Area'])
 
-# 4. Кодирование категориальных признаков вручную (создание дамми-переменных для 'Location')
-df = pd.get_dummies(df, columns=['Location'], drop_first=True)
+# Функция нормализации данных (мин-макс нормализация)
+def normalize_data(data):
+    normalized_data = []
+    min_max = []
+    for i in range(len(data[0])):  # По каждому столбцу
+        column = [row[i] for row in data]
+        min_val = min(column)
+        max_val = max(column)
+        min_max.append((min_val, max_val))
+        normalized_column = [(x - min_val) / (max_val - min_val) for x in column]
+        normalized_data.append(normalized_column)
+    # Транспонируем обратно в формат списка списков
+    normalized_data = list(map(list, zip(*normalized_data)))
+    return normalized_data, min_max
 
-# 5. Разделение данных на X (признаки) и y (целевую переменную)
-X = df.drop(['Price', 'Area'], axis=1).values
-y = df['Price'].values
 
-# 6. Масштабирование признаков вручную (стандартизация)
-X = np.array(X, dtype=float)  # Принудительное приведение всех значений к float
+# Обратная нормализация для предсказания
+def denormalize_price(normalized_price, min_price, max_price):
+    return normalized_price * (max_price - min_price) + min_price
 
-# Удаление строк с NaN или Inf значениями
-if np.any(np.isnan(X)) or np.any(np.isinf(X)):
-    print("Найдены NaN/Inf значения в X. Удаляем их.")
-    X = X[~np.isnan(X).any(axis=1)]  # Удаляем строки с NaN
-    X = X[~np.isinf(X).any(axis=1)]  # Удаляем строки с Inf
 
-# Проверка размерности X
-if X.ndim == 1:
-    X = X.reshape(-1, 1)  # Преобразуем в двумерный массив, если X одномерный
-elif X.ndim > 2:
-    raise ValueError("X должно быть не более чем двумерным массивом")
+# Функция разбиения на признаки и целевую переменную
+def split_features_labels(data):
+    features = [row[1:] for row in data]  # Остальные столбцы кроме цены
+    labels = [row[0] for row in data]  # Первый столбец (цена)
+    return features, labels
 
-# Масштабируем нормальные признаки
-X_mean = np.mean(X, axis=0)
-X_std = np.std(X, axis=0)
-X_std = np.where(X_std == 0, 1e-10, X_std)  # Избегаем деления на 0
-X_scaled = (X - X_mean) / X_std
 
-# 7. Разделение на обучающие и тестовые данные
-split_index = int(0.8 * len(X_scaled))
-X_train, X_test = X_scaled[:split_index], X_scaled[split_index:]
-y_train, y_test = y[:split_index], y[split_index:]
+# Линейная регрессия с градиентным спуском
+class LinearRegression:
+    def __init__(self, learning_rate=0.01, iterations=1000):
+        self.learning_rate = learning_rate
+        self.iterations = iterations
+        self.weights = None
+        self.bias = 0
 
-# 8. Линейная регрессия с регуляризацией (Ridge regression)
-lambda_reg = 1e4  # Параметр регуляризации
-I = np.eye(X_train.shape[1])  # Единичная матрица для регуляризации
-I[0, 0] = 0  # Не регуляризируем intercept (свободный член)
+    def train(self, X, y):
+        n_samples, n_features = len(X), len(X[0])
+        self.weights = [0] * n_features  # Инициализация весов
+        self.bias = 0  # Инициализация смещения
 
-# Решение через регуляризованный метод наименьших квадратов (Ridge regression)
-X_transpose = X_train.T
-beta = np.linalg.inv(X_transpose @ X_train + lambda_reg * I) @ (X_transpose @ y_train)
+        # Градиентный спуск
+        for _ in range(self.iterations):
+            y_predicted = [self.predict(x) for x in X]
 
-# 9. Предсказания
-y_pred = X_test @ beta
+            # Обновляем веса и смещение
+            dW = [0] * n_features
+            for j in range(n_features):
+                dW[j] = (-2 / n_samples) * sum((y[i] - y_predicted[i]) * X[i][j] for i in range(n_samples))
 
-# 10. Оценка модели
-mse = np.mean((y_test - y_pred) ** 2)
-print(f'Mean Squared Error: {mse}')
+            dB = (-2 / n_samples) * sum(y[i] - y_predicted[i] for i in range(n_samples))
 
-ss_total = np.sum((y_test - np.mean(y_test)) ** 2)
-ss_residual = np.sum((y_test - y_pred) ** 2)
-r2 = 1 - (ss_residual / ss_total)
-print(f'R2 Score: {r2}')
+            # Шаг градиентного спуска
+            self.weights = [self.weights[j] - self.learning_rate * dW[j] for j in range(n_features)]
+            self.bias -= self.learning_rate * dB
 
-# 11. Проверка предсказаний
-print("\nПроверка предсказаний:")
-test_results = pd.DataFrame({
-    'Real Price': y_test,
-    'Predicted Price': y_pred
-})
-print(test_results.head())  # Печать первых 5 строк
+    def predict(self, x):
+        return sum(self.weights[j] * x[j] for j in range(len(x))) + self.bias
+
+
+# Главная функция
+def main():
+    # 1. Загрузка данных
+    filename = 'csvdata.csv'
+    data = read_csv(filename)
+
+    # 2. Нормализация данных
+    normalized_data, min_max = normalize_data(data)
+    min_price, max_price = min_max[0]  # Нужны для обратной нормализации
+
+    # 3. Разделение данных на признаки и целевую переменную
+    features, labels = split_features_labels(normalized_data)
+
+    # 4. Обучение модели
+    model = LinearRegression(learning_rate=0.01, iterations=1000)
+    model.train(features, labels)
+
+    # 5. Пример предсказания (с использованием обученной модели)
+    test_sample = features[0]  # Берем первый образец для теста
+    predicted_price_normalized = model.predict(test_sample)
+    predicted_price = denormalize_price(predicted_price_normalized, min_price, max_price)
+
+    print(f"Предсказанная цена: {predicted_price}")
+    print(f"Фактическая цена: {denormalize_price(labels[0], min_price, max_price)}")
+
+
+if __name__ == "__main__":
+    main()

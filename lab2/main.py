@@ -51,7 +51,7 @@ X_norm = np.hstack((np.ones((m, 1)), X_norm))
 
 # Установка параметров
 alpha = 0.01
-num_iters = 100
+num_iters = 500
 theta = np.zeros(X_norm.shape[1])
 
 # Запуск градиентного спуска
@@ -65,7 +65,7 @@ plt.title('Сходимость градиентного спуска')
 plt.savefig('1.png')
 
 # Предсказание стоимости трактора с использованием градиентного спуска
-engine_speed = (1650 - mu[0]) / sigma[0]  # Нормировка (для градиентного спуска)
+engine_speed = (2104 - mu[0]) / sigma[0]  # Нормировка (для градиентного спуска)
 num_gears = (3 - mu[1]) / sigma[1]  # Нормировка (для градиентного спуска)
 
 predicted_price = np.array([[1, engine_speed, num_gears]]) @ theta
@@ -75,7 +75,7 @@ print(f'Предсказанная стоимость трактора (град
 theta_normal = normalEqn(np.hstack((np.ones((m, 1)), X)), y)
 
 # Нормировка для аналитического предсказания
-normalized_engine_speed = (1650 - mu[0]) / sigma[0]  # Нормировка
+normalized_engine_speed = (2104 - mu[0]) / sigma[0]  # Нормировка
 normalized_num_gears = (3 - mu[1]) / sigma[1]  # Нормировка
 
 predicted_price_normal = np.array([[1, normalized_engine_speed, normalized_num_gears]]) @ theta_normal

@@ -54,4 +54,5 @@ print("Свободный член (intercept):", model.intercept_)
 # --- Проверка предсказаний ---
 print("\nПроверка предсказаний:")
 test_results = pd.DataFrame({'Real Price': y_test, 'Predicted Price': y_pred})
-print(test_results.head())  # Печать первых 5 реальных и предсказанных значений
+print(test_results.head(15))  # Печать первых 5 реальных и предсказанных значений
+

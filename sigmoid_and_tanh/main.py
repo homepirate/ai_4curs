@@ -33,6 +33,17 @@ plt.legend()
 plt.grid(True)
 plt.savefig('sigmoid.png')
 
+
+# plt.figure(figsize=(10, 6))
+# plt.plot(points, sigmoid_values, marker='o', label="Sigmoid")
+# plt.xlabel("x")
+# plt.ylabel("σ(x)")
+# plt.title("График функции сигмоида по вычисленным значениям")
+# plt.legend()
+# plt.grid(True)
+# plt.savefig('sigmoid.png')
+# plt.show()
+
 # Гиперболические функции
 x = np.linspace(-20, 20, num=1000)
 
