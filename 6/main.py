@@ -1,47 +1,49 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 
-# Задаем параметры модели
-theta = np.array([1, 0, 2, 1, 1, 0])  # (theta0, theta1, theta2, theta3, theta4, theta5)
 
-# Определим функцию, которая возвращает значение модели
-def model(x1, x2):
-    return (theta[0] +
-            theta[1]*x1 +
-            theta[2]*x2 +
-            theta[3]*x1*x2 +
-            theta[4]*x1**2 +
-            theta[5]*x2**2)
+# Заданные параметры
+theta = np.array([1, 0, 2, 1, 1, 0])
+alpha = 0.5
 
-# Создаем сетку значений для x1 и x2
-x1_vals = np.linspace(-3, 3, 400)
-x2_vals = np.linspace(-3, 3, 400)
-X1, X2 = np.meshgrid(x1_vals, x2_vals)
+# Определяем диапазон для x1 и x2
+x1_min, x1_max = -5, 5
+x2_min, x2_max = -5, 5
 
-# Вычисляем значения модели
-Z = model(X1, X2)
+# Создаем сетку значений
+x1 = np.linspace(x1_min, x1_max, 400)
+x2 = np.linspace(x2_min, x2_max, 400)
+X1, X2 = np.meshgrid(x1, x2)
 
-# Создаем график разделяющей кривой
-plt.figure(figsize=(10, 8))
-contour = plt.contour(X1, X2, Z, levels=[0.5], colors='red')
-plt.clabel(contour, inline=True, fontsize=10)
+# Вычисляем значение функции на сетке
+# Модель: theta0 + theta1*x1 + theta2*x2 + theta3*x1*x2 + theta4*x1^2 + theta5*x2^2
+F = theta[0] + theta[1]*X1 + theta[2]*X2 + theta[3]*X1*X2 + theta[4]*X1**2 + theta[5]*X2**2
 
-# Указываем области классов
-plt.fill_between(x1_vals, -np.sqrt(3 - x1_vals**2), -3, color='blue', alpha=0.3, label='Класс 0 (y=0)')
-plt.fill_between(x1_vals, np.sqrt(3 - x1_vals**2), 3, color='green', alpha=0.3, label='Класс 1 (y=1)')
+# Построение графика
+plt.figure(figsize=(8, 6))
 
-# Параметры графика
-plt.title('Кривая разделения классов')
-plt.xlabel('x1')
-plt.ylabel('x2')
-plt.axhline(0, color='black', lw=0.5, ls='--')
-plt.axvline(0, color='black', lw=0.5, ls='--')
+# Закрашивание областей
+# Класс 1: F >= alpha
+# Класс 0: F < alpha
+plt.contourf(X1, X2, F >= alpha, alpha=0.3, colors=['#FFAAAA', '#AAFFAA'])
 
-# Легенда
-plt.legend()
-plt.grid()
-plt.xlim(-3, 3)
-plt.ylim(-3, 3)
+# Контур, где F = alpha
+contour = plt.contour(X1, X2, F, levels=[alpha], colors='k')
+plt.clabel(contour, fmt={alpha: 'Граница решения'}, inline=True)
 
-# Показываем график
-plt.savefig('graf.png')
+# Добавление легенды
+legend_elements = [
+    Patch(facecolor='#AAFFAA', edgecolor='k', label='Класс 1'),
+    Patch(facecolor='#FFAAAA', edgecolor='k', label='Класс 0'),
+    Patch(facecolor='none', edgecolor='k', label='Граница решения')
+]
+plt.legend(handles=legend_elements, loc='upper left')
+
+# Добавление меток осей и заголовка
+plt.xlabel('$x_1$')
+plt.ylabel('$x_2$')
+plt.title('Граница решения и области классов')
+
+plt.grid(True)
+plt.savefig('1.png')
