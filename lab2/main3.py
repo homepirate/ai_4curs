@@ -6,16 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D  # Necessary for 3D plotting
 
 
 def load_data(filename):
-    """
-    Load data from a CSV file.
 
-    Parameters:
-        filename (str): Path to the CSV file.
-
-    Returns:
-        X (ndarray): Feature matrix.
-        y (ndarray): Target vector.
-    """
     data = pd.read_csv(filename, header=None)
     X = data.iloc[:, :-1].values  # Features
     y = data.iloc[:, -1].values  # Target variable
@@ -23,17 +14,7 @@ def load_data(filename):
 
 
 def feature_normalize(X):
-    """
-    Normalize the features in X.
 
-    Parameters:
-        X (ndarray): Feature matrix.
-
-    Returns:
-        X_norm (ndarray): Normalized feature matrix.
-        mu (ndarray): Mean of each feature.
-        sigma (ndarray): Standard deviation of each feature.
-    """
     mu = np.mean(X, axis=0)
     sigma = np.std(X, axis=0)
     X_norm = (X - mu) / sigma
@@ -41,17 +22,7 @@ def feature_normalize(X):
 
 
 def compute_cost(X, y, theta):
-    """
-    Compute the cost for linear regression.
 
-    Parameters:
-        X (ndarray): Feature matrix.
-        y (ndarray): Target vector.
-        theta (ndarray): Parameters.
-
-    Returns:
-        J (float): Computed cost.
-    """
     m = len(y)
     predictions = X @ theta
     errors = predictions - y
@@ -60,20 +31,7 @@ def compute_cost(X, y, theta):
 
 
 def gradient_descent(X, y, theta, alpha, num_iters):
-    """
-    Perform gradient descent to learn theta.
 
-    Parameters:
-        X (ndarray): Feature matrix.
-        y (ndarray): Target vector.
-        theta (ndarray): Initial parameters.
-        alpha (float): Learning rate.
-        num_iters (int): Number of iterations.
-
-    Returns:
-        theta (ndarray): Learned parameters.
-        J_history (list): Cost history over iterations.
-    """
     m = len(y)
     J_history = []
 
@@ -90,29 +48,14 @@ def gradient_descent(X, y, theta, alpha, num_iters):
 
 
 def normal_equation(X, y):
-    """
-    Compute the parameters using the Normal Equation.
 
-    Parameters:
-        X (ndarray): Feature matrix.
-        y (ndarray): Target vector.
-
-    Returns:
-        theta (ndarray): Computed parameters.
-    """
     # Using pseudo-inverse for numerical stability
     theta = np.linalg.pinv(X.T @ X) @ X.T @ y
     return theta
 
 
 def plot_cost_vs_alpha(alpha_values, J_histories):
-    """
-    Plot cost vs iterations for different alpha values.
 
-    Parameters:
-        alpha_values (list): List of alpha (learning rate) values.
-        J_histories (list): List of cost histories for each alpha.
-    """
     plt.figure(figsize=(10, 6))
     for alpha, J_history in zip(alpha_values, J_histories):
         plt.plot(range(1, len(J_history) + 1), J_history, label=f'alpha = {alpha}')
@@ -123,58 +66,10 @@ def plot_cost_vs_alpha(alpha_values, J_histories):
     plt.grid(True)
     plt.savefig('cost_vs_alpha.png')
     plt.close()
-#
-#
-# def plot_predictions(X, y, theta_gd, theta_normal, predicted_example):
-#     """
-#     Plot predictions from Gradient Descent and Normal Equation against actual data.
-#
-#     Parameters:
-#         X (ndarray): Normalized feature matrix with intercept term.
-#         y (ndarray): Target vector.
-#         theta_gd (ndarray): Parameters from Gradient Descent.
-#         theta_normal (ndarray): Parameters from Normal Equation.
-#         predicted_example (ndarray): Example prediction [price, speed_norm, gears_norm].
-#     """
-#     plt.figure(figsize=(10, 6))
-#
-#     # Predictions
-#     predictions_gd = X @ theta_gd
-#     predictions_normal = X @ theta_normal
-#
-#     # Scatter plot of actual data
-#     plt.scatter(X[:, 1] * sigma[0] + mu[0], y, color='blue', label='Actual Data')
-#
-#     # Plot predictions
-#     plt.plot(X[:, 1] * sigma[0] + mu[0], predictions_gd, linestyle='--', color='red', label='Gradient Descent')
-#     plt.plot(X[:, 1] * sigma[0] + mu[0], predictions_normal, linestyle=':', color='green', label='Normal Equation')
-#
-#     # Plot predicted example
-#     plt.scatter(predicted_example[1] * sigma[0] + mu[0], predicted_example[0], marker='x', s=100, color='black',
-#                 label='Predicted Example')
-#
-#     plt.xlabel('Engine Speed')
-#     plt.ylabel('Price')
-#     plt.title('Price vs Engine Speed')
-#     plt.legend()
-#     plt.grid(True)
-#     plt.savefig("predict.png")
-#     plt.close()
 
 
-def plot_3d(X, y, theta_gd, theta_normal, predicted_example, mu, sigma):
-    """
-    Plot a 3D graph with actual data points, prediction planes, and a predicted point.
+def plot_3d(X, y, theta_gd, theta_normal, predicted_example, mu, sigma, predicted_example_normal):
 
-    Parameters:
-        X (ndarray): Normalized feature matrix with intercept term.
-        y (ndarray): Target vector.
-        theta_gd (ndarray): Parameters from Gradient Descent.
-        theta_normal (ndarray): Parameters from Normal Equation.
-        predicted_example (ndarray): Example prediction [price, speed_norm, gears_norm].
-        mu (ndarray): Mean of each feature.
-        sigma (ndarray): Standard deviation of each feature.
-    """
     fig = plt.figure(figsize=(12, 8))
     ax = fig.add_subplot(111, projection='3d')
 
@@ -216,12 +111,19 @@ def plot_3d(X, y, theta_gd, theta_normal, predicted_example, mu, sigma):
     ax.scatter(predicted_speed, predicted_gears, predicted_price, color='black', s=100, marker='X',
                label='Predicted Point')
 
+    predicted_price, predicted_speed_norm, predicted_gears_norm = predicted_example_normal
+    predicted_speed = predicted_speed_norm * sigma[0] + mu[0]
+    predicted_gears = predicted_gears_norm * sigma[1] + mu[1]
+    ax.scatter(predicted_speed, predicted_gears, predicted_price, color='green', s=100, marker='X',
+               label='Predicted Point Normal')
+
     # Custom Legend
     legend_elements = [
         Line2D([0], [0], marker='o', color='w', label='Actual Data', markerfacecolor='blue', markersize=10),
         Line2D([0], [0], color='red', lw=4, label='Gradient Descent Plane'),
         # Line2D([0], [0], color='green', lw=4, label='Normal Equation Plane'),
-        Line2D([0], [0], marker='X', color='w', label='Predicted Point', markerfacecolor='black', markersize=10)
+        Line2D([0], [0], marker='X', color='w', label='Predicted Point', markerfacecolor='black', markersize=10),
+        Line2D([0], [0], marker='X', color='green', label='Predicted Point Normal', markerfacecolor='black', markersize=10)
     ]
     ax.legend(handles=legend_elements)
 
@@ -246,8 +148,8 @@ if __name__ == "__main__":
     X_norm = np.hstack((np.ones((m, 1)), X_norm))
 
     # 4. Gradient Descent for Different Alphas
-    alpha_values = [0.001, 0.01, 0.1, 0.3]
-    num_iters_alpha = 10000
+    alpha_values = [0.001, 0.01, 0.05, 0.1, 0.3]
+    num_iters_alpha = 100
     J_histories_alpha = []
     theta_initial = np.zeros(X_norm.shape[1])
 
@@ -262,8 +164,7 @@ if __name__ == "__main__":
     plot_cost_vs_alpha(alpha_values, J_histories_alpha)
     print("Saved plot 'cost_vs_alpha.png'")
 
-    # 6. Select Best Alpha (e.g., alpha = 0.01 based on convergence)
-    best_alpha = 0.01
+    best_alpha = 0.05
     num_iters_best = 1000
     theta_gd, J_history_gd = gradient_descent(X_norm, y, theta_initial.copy(), best_alpha, num_iters_best)
 
@@ -280,9 +181,12 @@ if __name__ == "__main__":
 
     # 8. Predict Using Gradient Descent
     # Example: Engine Speed = 2104, Number of Gears = 3
-    engine_speed = (2104 - mu[0]) / sigma[0]
-    num_gears = (3 - mu[1]) / sigma[1]
-    X_pred_gd = np.array([1, engine_speed, num_gears])
+    engine_speed = int(input("Скорость оборота двигателя: "))
+    engine_speed_2 = (engine_speed - mu[0]) / sigma[0]
+
+    num_gear = int(input("Количество передач: "))
+    num_gears_2 = (num_gear - mu[1]) / sigma[1]
+    X_pred_gd = np.array([1, engine_speed_2, num_gears_2])
     predicted_price_gd = X_pred_gd @ theta_gd
     print(f'Predicted price (Gradient Descent): ${predicted_price_gd:.2f}')
 
@@ -292,17 +196,17 @@ if __name__ == "__main__":
     theta_normal = normal_equation(X_with_intercept, y)
 
     # 10. Predict Using Normal Equation
-    X_pred_normal = np.array([1, 2104, 3])
+    X_pred_normal = np.array([1, engine_speed, num_gears_2])
     predicted_price_normal = X_pred_normal @ theta_normal
     print(f'Predicted price (Normal Equation): ${predicted_price_normal:.2f}')
 
     # 11. Prepare Predicted Example for Plotting
-    predicted_example = np.array([predicted_price_gd, engine_speed, num_gears])
-
+    predicted_example = np.array([predicted_price_gd, engine_speed_2, num_gears_2])
+    predicted_example_normal = np.array([predicted_price_normal, engine_speed_2, num_gears_2])
     # 12. Plot Predictions
     # plot_predictions(X_norm, y, theta_gd, theta_normal, predicted_example)
     # print("Saved plot 'predict.png'")
 
     # 13. Plot 3D Graph
-    plot_3d(X_norm, y, theta_gd, theta_normal, predicted_example, mu, sigma)
+    plot_3d(X_norm, y, theta_gd, theta_normal, predicted_example, mu, sigma, predicted_example_normal)
     print("Saved plot '3d_plot.png'")
