@@ -5,7 +5,7 @@ def manual_decision_boundary_plot_no_bridge():
     """
     1) "Ручной" расчёт z = 1 + 2*x2 + x1*x2 + x1^2 на сетке -> раскраска классов.
     2) Явный вывод x2 через x1: x2 = -(x1^2 + 1)/(x1 + 2), но
-       - строим отдельно для x1 < -2 и x1 > -2, чтобы не было "мостика".
+       - строим отдельно для x1 < -2 и x1 > -2".
     """
 
     # -- 1) ПАРАМЕТРЫ --
@@ -66,7 +66,7 @@ def manual_decision_boundary_plot_no_bridge():
             x1_plot_right.append(x1)
             x2_vals_right.append(x2)
 
-    # Рисуем обе ветви одной линией (но фактически это две)
+    # Рисуем обе ветви одной линией
     plt.plot(x1_plot_left, x2_vals_left, 'r-', linewidth=2)
     plt.plot(x1_plot_right, x2_vals_right, 'r-', linewidth=2,
              label="Граница решения (z=0)")
@@ -80,7 +80,7 @@ def manual_decision_boundary_plot_no_bridge():
     class_0_patch = plt.Rectangle((0,0), 0, 0, facecolor='lightblue', alpha=0.8,
                                   label='Class 0 (z < 0)')
     class_1_patch = plt.Rectangle((0,0), 0, 0, facecolor='lightgreen', alpha=0.8,
-                                  label='Class 1 (z >= 0)')
+                                  label='Class 1 (z > 0)')
     plt.gca().add_patch(class_0_patch)
     plt.gca().add_patch(class_1_patch)
     plt.legend(loc='upper right')

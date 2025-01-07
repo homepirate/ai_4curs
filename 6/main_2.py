@@ -24,7 +24,7 @@ def decision_boundary_plot():
     plt.figure(figsize=(8, 6))
     # levels=[0] означает: строим контур(ы) по уровню z = 0
     contour = plt.contour(X1, X2, Z, levels=[0], colors='red', linewidths=2)
-    contour.collections[0].set_label("decision boundary (z=0)")
+    contour.collections[0].set_label("граница решений (z=0)")
 
     # Шаг 4. Заштриховываем области:
     #   - Z < 0 (класс 0)
@@ -45,7 +45,7 @@ def decision_boundary_plot():
     # Подписи осей и легенда
     plt.xlabel("x1")
     plt.ylabel("x2")
-    plt.title("Разделяющая кривая для логистической регрессии (при alpha=0.5)")
+    plt.title("Разделяющая кривая")
     plt.legend(loc='upper right')
     plt.grid(True)
 
