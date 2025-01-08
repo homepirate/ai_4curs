@@ -1,3 +1,4 @@
+import joblib
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -59,6 +60,11 @@ X_train, X_val, X_test, y_train, y_val, y_test = split_dataset(shuffled_data, ta
 # Initialize the model
 model = LinearRegression()
 
+
+feature_names = X_train.columns.tolist()
+joblib.dump(feature_names, 'feature_names.joblib')
+
+
 # Train the model on the training data
 model.fit(X_train, y_train)
 
@@ -71,3 +77,12 @@ r2 = r2_score(y_val, y_val_pred)
 
 print(f"Mean Squared Error (MSE): {mse}")
 print(f"R^2 Score: {r2}")
+
+
+# Save the model, encoders, scaler, and feature names
+joblib.dump(model, 'linear_regression_model.joblib')
+joblib.dump(encoders, 'label_encoders.joblib')
+joblib.dump(scaler, 'minmax_scaler.joblib')
+
+print("Model and preprocessing objects have been saved successfully.")
+
