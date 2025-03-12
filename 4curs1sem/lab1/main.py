@@ -138,7 +138,7 @@ def main():
     theta = gradient_descent(X, y, theta, alpha, iterations)
 
     print(f'Theta gradient descent: {theta}')
-    plot_data(X_original, y, theta, None,'2.png')
+    plot_data(X_original, y, theta, None, '2.png')
 
     theta_el = gradient_descent_by_element(X, y, theta, alpha, iterations)
     print(f'Theta gradient descent by element: {theta_el}')

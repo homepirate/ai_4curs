@@ -1,12 +1,10 @@
 import sys
 import joblib
 import pandas as pd
-import numpy as np
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QComboBox,
     QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox
 )
-from PyQt6.QtCore import Qt
 
 # Пути к файлам (при необходимости обновите)
 DATA_PATH = '../../data/csvdata.csv'  # Путь к вашему датасету

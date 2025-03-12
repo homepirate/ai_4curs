@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt  # Импортируем matplotlib для построения графиков
+from sklearn.model_selection import train_test_split, learning_curve
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -78,3 +79,42 @@ results = {
 }
 
 print("Model Performance:", results)
+
+# Добавление графика обучения (Learning Curve) с одной линией (валидационная RMSE)
+train_sizes, train_scores, val_scores = learning_curve(
+    estimator=pipeline,
+    X=X_train,
+    y=y_train,
+    train_sizes=np.linspace(0.1, 1.0, 10),
+    cv=5,
+    scoring='neg_mean_squared_error',
+    n_jobs=-1
+)
+
+# Преобразование отрицательных MSE в RMSE для валидационных данных
+val_rmse_curve = np.sqrt(-val_scores)
+
+# Средние значения и стандартные отклонения для валидационной RMSE
+val_rmse_mean = np.mean(val_rmse_curve, axis=1)
+val_rmse_std = np.std(val_rmse_curve, axis=1)
+
+# Определение границ для оси Y с небольшим отступом
+y_min = max(val_rmse_mean - val_rmse_std) * 0.95  # Немного ниже минимального значения
+y_max = max(val_rmse_mean + val_rmse_std) * 1.05  # Немного выше максимального значения
+
+# Построение графика обучения с одной линией
+plt.figure(figsize=(10, 6))
+plt.plot(train_sizes, val_rmse_mean, 'o-', color='green', label='Validation RMSE')
+plt.fill_between(train_sizes, val_rmse_mean - val_rmse_std,
+                 val_rmse_mean + val_rmse_std, alpha=0.1, color='green')
+plt.title('Learning Curve for RandomForestRegressor')
+plt.xlabel('Training Set Size')
+plt.ylabel('RMSE')
+plt.legend(loc='best')
+plt.grid(True)
+plt.tight_layout()
+
+# Настройка масштаба оси Y
+plt.ylim(y_min, y_max)
+
+plt.show()

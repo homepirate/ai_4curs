@@ -106,7 +106,7 @@ class SimpleRandomForestRegressor:
         np.random.seed(self.random_state)
         self.trees = []
         for _ in range(self.n_trees):
-            sample_indices = np.random.choice(len(X), len(X), replace=True)
+            sample_indices = np.random.choice(len(X), len(X), replace=True) # генерируем случайную выборку из индексов
             X_sample = X.iloc[sample_indices]
             y_sample = y.iloc[sample_indices]
             tree = self._build_tree(X_sample, y_sample, depth=0)
